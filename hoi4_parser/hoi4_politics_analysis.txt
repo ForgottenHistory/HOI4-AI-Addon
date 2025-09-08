@@ -1,0 +1,31 @@
+Parsing HOI4 save file: autosave.hoi4
+
+=== Political Data Extraction Test ===
+Player country: SHX
+Date: 1936.5.1.2
+
+=== SHX Data (Enhanced Parser) ===
+Stability: 70.00%
+War Support: 40.00%
+Variables: 1
+
+=== POLITICS DATA EXTRACTED! ===
+Ruling Party: neutrality
+Political Power: 67.397
+Party Support:
+  Democratic: 0.0%
+    Leader ideology: socialism
+  Communist: 0.0%
+    Leader ideology: anarchist_communism
+  Fascist: 0.0%
+    Leader ideology: nazism
+  Neutrality: 100.0%
+    Leader ideology: despotism
+    Character ID: 3749
+Ideas: PRC_government_corruption, CHI_ineffective_bureaucracy_warlord, CHI_warlord_state_idea, civilian_economy, export_focus, volunteer_only
+
+=== SUCCESS! ===
+Enhanced parser successfully extracted politics data!
+We can now build the news generator with this political information.
+
+Analysis saved to: hoi4_politics_analysis.txt
