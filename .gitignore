@@ -3,3 +3,4 @@
 /__pycache__/
 hoi4_parser/game_data.json
 game_data.json
+src/__pycache__/
