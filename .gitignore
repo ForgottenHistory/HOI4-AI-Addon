@@ -1,3 +1,4 @@
 /hoi4_parser/target/
 /hoi4_parser/countries/
 /__pycache__/
+hoi4_parser/game_data.json
