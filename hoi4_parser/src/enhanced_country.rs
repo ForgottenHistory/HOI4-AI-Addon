@@ -20,6 +20,8 @@ pub struct EnhancedHoi4Save {
     pub date: Hoi4Date,
     #[serde(default, deserialize_with = "deserialize_vec_pair")]
     pub countries: Vec<(CountryTag, EnhancedCountry)>,
+    #[serde(default)]
+    pub fired_event_names: Vec<String>,
 }
 
 #[derive(Deserialize, Debug, Clone, Serialize)]
@@ -67,7 +69,7 @@ pub struct Party {
     #[serde(default)]
     pub popularity: Option<f64>,
     #[serde(default)]
-    pub country_leader: Option<Vec<CountryLeader>>,  // Changed: This is an array
+    pub country_leader: Option<Vec<CountryLeader>>,
 }
 
 #[derive(Deserialize, Debug, Clone, Serialize)]
@@ -83,5 +85,5 @@ pub struct Character {
     #[serde(default)]
     pub id: Option<i32>,
     #[serde(default)]
-    pub r#type: Option<i32>,  // 'type' is a keyword, so use raw identifier
+    pub r#type: Option<i32>,
 }

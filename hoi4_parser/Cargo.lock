@@ -8,6 +8,7 @@ version = "0.1.0"
 dependencies = [
  "hoi4save",
  "serde",
+ "serde_json",
 ]
 
 [[package]]
