@@ -6,7 +6,7 @@ Main orchestrator for AI-powered game analysis
 
 from typing import Dict, Any
 from ai_client import AIClient, AIConfig
-from ai_generators import (
+from generators import (
     IntelligenceGenerator, 
     AdviserGenerator, 
     NewsGenerator, 
@@ -17,8 +17,8 @@ class HOI4AIService:
     """Main AI service that coordinates generators and client"""
     
     def __init__(self, ai_config: AIConfig = None):
-        # Initialize AI client
-        self.client = AIClient(ai_config)
+        # Initialize AI client with logging enabled
+        self.client = AIClient(ai_config, log_prompts=True)
         
         # Register all available generators
         self.generators = {
@@ -43,7 +43,8 @@ class HOI4AIService:
         # Make the API call
         return self.client.generate_text(
             prompt=prompt,
-            max_tokens=generator.get_max_tokens()
+            max_tokens=generator.get_max_tokens(),
+            report_type=report_type
         )
     
     def add_generator(self, name: str, generator):
@@ -56,4 +57,4 @@ class HOI4AIService:
     
     def set_ai_config(self, config: AIConfig):
         """Update AI configuration"""
-        self.client = AIClient(config)
+        self.client = AIClient(config, log_prompts=True)

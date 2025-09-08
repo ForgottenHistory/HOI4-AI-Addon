@@ -207,6 +207,22 @@ class HOI4Analyzer:
         except Exception as e:
             print(f"AI analysis failed: {e}")
             print("Make sure your OPENROUTER_API_KEY is set correctly")
+    
+    def generate_all_reports(self):
+        """Generate all available AI reports"""
+        report_types = ['intelligence', 'adviser', 'news', 'twitter']
+        
+        for report_type in report_types:
+            print(f"\n{'='*60}")
+            print(f"🤖 GENERATING {report_type.upper()} REPORT...")
+            print('='*60)
+            
+            try:
+                self.generate_ai_report(report_type)
+            except Exception as e:
+                print(f"Failed to generate {report_type} report: {e}")
+            
+            print()  # Add spacing between reports
 
 def main():
     analyzer = HOI4Analyzer()
@@ -223,7 +239,16 @@ def main():
     print("🤖 GENERATING AI ANALYSIS...")
     print("="*50)
     
-    analyzer.generate_ai_report('twitter')
+    # Choose one of these options:
+    
+    # Option 1: Generate all reports
+    analyzer.generate_all_reports()
+    
+    # Option 2: Generate single report (comment out line above, uncomment one below)
+    # analyzer.generate_ai_report('intelligence')  # Diplomatic briefing
+    # analyzer.generate_ai_report('adviser')       # Strategic advice
+    # analyzer.generate_ai_report('news')         # Newspaper article  
+    # analyzer.generate_ai_report('twitter')      # Twitter feed
 
 if __name__ == "__main__":
     main()

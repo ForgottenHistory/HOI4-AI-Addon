@@ -7,6 +7,8 @@ import os
 import requests
 from typing import Optional
 from dataclasses import dataclass
+from datetime import datetime
+from pathlib import Path
 
 @dataclass
 class AIConfig:
@@ -20,7 +22,7 @@ class AIConfig:
 class AIClient:
     """Generic AI API client"""
     
-    def __init__(self, config: Optional[AIConfig] = None):
+    def __init__(self, config: Optional[AIConfig] = None, log_prompts: bool = True):
         if config:
             self.config = config
         else:
@@ -34,9 +36,19 @@ class AIClient:
                 model="moonshotai/kimi-k2-0905",
                 base_url="https://openrouter.ai/api/v1/chat/completions"
             )
+        
+        self.log_prompts = log_prompts
+        self.log_dir = Path("ai_logs")
+        if self.log_prompts:
+            self.log_dir.mkdir(exist_ok=True)
     
-    def generate_text(self, prompt: str, max_tokens: int = 1000, temperature: Optional[float] = None) -> str:
+    def generate_text(self, prompt: str, max_tokens: int = 1000, temperature: Optional[float] = None, report_type: str = "unknown") -> str:
         """Generate text using the AI API"""
+        
+        # Log the prompt
+        if self.log_prompts:
+            self._log_prompt(prompt, report_type)
+        
         headers = {
             "Authorization": f"Bearer {self.config.api_key}",
             "Content-Type": "application/json",
@@ -59,7 +71,13 @@ class AIClient:
             response.raise_for_status()
             
             result = response.json()
-            return result['choices'][0]['message']['content'].strip()
+            generated_text = result['choices'][0]['message']['content'].strip()
+            
+            # Log the response
+            if self.log_prompts:
+                self._log_response(generated_text, report_type)
+            
+            return generated_text
             
         except requests.exceptions.Timeout:
             return "AI Generation Error: Request timed out"
@@ -69,3 +87,37 @@ class AIClient:
             return f"AI Generation Error: Unexpected response format - {e}"
         except Exception as e:
             return f"AI Generation Error: {e}"
+    
+    def _log_prompt(self, prompt: str, report_type: str):
+        """Log the prompt to a file"""
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"{timestamp}_{report_type}_prompt.txt"
+        log_path = self.log_dir / filename
+        
+        try:
+            with open(log_path, 'w', encoding='utf-8') as f:
+                f.write(f"=== AI PROMPT LOG ===\n")
+                f.write(f"Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+                f.write(f"Report Type: {report_type}\n")
+                f.write(f"Model: {self.config.model}\n")
+                f.write(f"Max Tokens: (will be set by generator)\n")
+                f.write(f"Temperature: {self.config.default_temperature}\n")
+                f.write(f"{'='*50}\n\n")
+                f.write(prompt)
+                f.write(f"\n\n{'='*50}\n")
+        except Exception as e:
+            print(f"Warning: Failed to log prompt: {e}")
+    
+    def _log_response(self, response: str, report_type: str):
+        """Log the AI response to the same file"""
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"{timestamp}_{report_type}_prompt.txt"
+        log_path = self.log_dir / filename
+        
+        try:
+            with open(log_path, 'a', encoding='utf-8') as f:
+                f.write(f"=== AI RESPONSE ===\n\n")
+                f.write(response)
+                f.write(f"\n\n{'='*50}\n")
+        except Exception as e:
+            print(f"Warning: Failed to log response: {e}")
