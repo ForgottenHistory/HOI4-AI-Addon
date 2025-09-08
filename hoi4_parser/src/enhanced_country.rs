@@ -1,5 +1,5 @@
 use hoi4save::{CountryTag, Hoi4Date};
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize, Deserializer};
 use std::collections::HashMap;
 use std::hash::Hash;
 
@@ -12,6 +12,15 @@ where
 {
     let map: HashMap<K, V> = HashMap::deserialize(deserializer)?;
     Ok(map.into_iter().collect())
+}
+
+fn deserialize_completed<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    // Try to deserialize as a single string first, then wrap in Vec
+    let value = String::deserialize(deserializer)?;
+    Ok(vec![value])
 }
 
 #[derive(Deserialize, Debug, Clone, Serialize)]
@@ -34,6 +43,18 @@ pub struct EnhancedCountry {
     pub variables: HashMap<String, f64>,
     #[serde(default)]
     pub politics: Option<Politics>,
+    #[serde(default)]
+    pub focus: Option<Focus>,
+}
+
+#[derive(Deserialize, Debug, Clone, Serialize)]
+pub struct Focus {
+    #[serde(default)]
+    pub progress: Option<f64>,
+    #[serde(default)]
+    pub current: Option<String>,
+    #[serde(default)]
+    pub paused: Option<String>,
 }
 
 #[derive(Deserialize, Debug, Clone, Serialize)]
