@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-HOI4 Game Data Analyzer with Localization
+HOI4 Game Data Analyzer with Localization and AI Services
 Reads JSON output from Rust extractor and processes game data
 """
 
@@ -10,6 +10,7 @@ import sys
 from pathlib import Path
 from typing import Dict, List, Any
 from localization import HOI4Localizer
+from ai_analyst import HOI4AIService
 
 class HOI4Analyzer:
     def __init__(self, json_path: str = "game_data.json"):
@@ -108,20 +109,67 @@ class HOI4Analyzer:
         return analysis
     
     def get_localized_events(self) -> List[str]:
-        """Get list of recent events with localized names, filtering out hidden events"""
+        """Get list of recent events with localized names, filtering out events with dynamic text in title OR description"""
         if not self.data:
             return []
         
-        localized_events = []
+        clean_events = []
         for event in self.data['events']:
-            # Try to get localized name
-            localized_name = self.localizer.get_event_name(event)
+            # Try to get localized title
+            localized_title = self.localizer.get_event_name(event)
             
-            # Only include if we found a proper localization (not the original event ID)
-            if localized_name != event:
-                localized_events.append(localized_name)
+            # Try to get localized description
+            localized_desc = self._get_event_description(event)
+            
+            # Only include if:
+            # 1. We found a proper title localization (not the original event ID)
+            # 2. The title doesn't contain dynamic placeholders
+            # 3. The description (if found) doesn't contain dynamic placeholders
+            if (localized_title != event and 
+                not self._has_dynamic_text(localized_title) and
+                not self._has_dynamic_text(localized_desc)):
+                clean_events.append(localized_title)
         
-        return localized_events
+        return clean_events
+
+    def _get_event_description(self, event_id: str) -> str:
+        """Get event description, return empty string if not found"""
+        # Try .d suffix (description)
+        desc_key = f"{event_id}.d"
+        if desc_key in self.localizer.translations:
+            return self.localizer.translations[desc_key]
+        
+        # Try .desc suffix (alternative description)
+        desc_key = f"{event_id}.desc"
+        if desc_key in self.localizer.translations:
+            return self.localizer.translations[desc_key]
+        
+        # Return empty string if no description found
+        return ""
+
+    def _has_dynamic_text(self, text: str) -> bool:
+        """Check if text contains dynamic placeholders like [FROM.GetName]"""
+        if not text:  # Handle empty strings
+            return False
+            
+        # Check for square brackets (dynamic text markers)
+        if '[' in text and ']' in text:
+            return True
+        
+        # Check for other common dynamic patterns
+        dynamic_patterns = [
+            'ROOT.',
+            'FROM.',
+            'THIS.',
+            'PREV.',
+            '.Get',
+        ]
+        
+        for pattern in dynamic_patterns:
+            if pattern in text:
+                return True
+        
+        return False
     
     def print_summary(self):
         """Print a human-readable summary of the current game state"""
@@ -165,6 +213,73 @@ class HOI4Analyzer:
                 if ideas_str:
                     print(f"    Ideas: {ideas_str}")
 
+    def generate_ai_report(self, report_type: str = 'intelligence'):
+        """Generate AI-powered analysis report of specified type"""
+        if not self.data:
+            print("No data loaded for AI analysis")
+            return
+        
+        try:
+            ai_service = HOI4AIService()
+            
+            if report_type == 'intelligence':
+                print("\n" + "="*60)
+                print("🌍 AI WORLD INTELLIGENCE BRIEFING")
+                print("="*60)
+                
+                report = ai_service.generate_report('intelligence', self.data)
+                print(report)
+            
+            elif report_type == 'adviser':
+                player_tag = self.data['metadata']['player']
+                player_analysis = self.analyze_political_situation(player_tag)
+                
+                if player_analysis:
+                    print("\n" + "="*60)
+                    print(f"🏛️ AI STRATEGIC ASSESSMENT - {player_analysis['name'].upper()}")
+                    print("="*60)
+                    
+                    report = ai_service.generate_report('adviser', self.data, player_analysis=player_analysis)
+                    print(report)
+                else:
+                    print("No player data available for adviser report")
+            
+            elif report_type == 'news':
+                recent_events = self.get_localized_events()
+                if recent_events:
+                    print("\n" + "="*60)
+                    print("📰 AI GENERATED NEWS REPORT")
+                    print("="*60)
+                    
+                    report = ai_service.generate_report('news', self.data, recent_events=recent_events)
+                    print(report)
+                else:
+                    print("No recent events for news report")
+            
+            elif report_type == 'twitter':
+                recent_events = self.get_localized_events()
+                print("\n" + "="*60)
+                print("🐦 AI TWITTER FEED - 1936 EDITION")
+                print("="*60)
+                
+                report = ai_service.generate_report('twitter', self.data, recent_events=recent_events)
+                print(report)
+            
+            else:
+                print(f"Unknown report type: {report_type}")
+                print("Available types: intelligence, adviser, news, twitter")
+        
+        except Exception as e:
+            print(f"AI analysis failed: {e}")
+            print("Make sure your OPENROUTER_API_KEY is set correctly")
+    
+    def generate_all_reports(self):
+        """Generate all available AI reports"""
+        self.generate_ai_report('intelligence')
+        self.generate_ai_report('adviser') 
+        self.generate_ai_report('news')
+        self.generate_ai_report('twitter')
+
 def main():
     analyzer = HOI4Analyzer()
     
@@ -196,6 +311,20 @@ def main():
             print(f"\nNational Ideas:")
             for idea in player_analysis['national_ideas']:
                 print(f"  • {idea}")
+    
+    # AI Analysis - you can change this to try different modes!
+    print("\n" + "="*50)
+    print("🤖 GENERATING AI ANALYSIS...")
+    print("="*50)
+    
+    # Try different report types:
+    # analyzer.generate_ai_report('intelligence')  # Formal diplomatic briefing
+    # analyzer.generate_ai_report('adviser')       # Strategic advice for your country
+    # analyzer.generate_ai_report('news')         # Newspaper article
+    analyzer.generate_ai_report('twitter')      # Twitter feed (default - this is the funny one!)
+    
+    # Or generate all reports:
+    # analyzer.generate_all_reports()
 
 if __name__ == "__main__":
     main()
