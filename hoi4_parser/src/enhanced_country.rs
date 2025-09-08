@@ -1,5 +1,5 @@
 use hoi4save::{CountryTag, Hoi4Date};
-use serde::{Deserialize, Serialize, Deserializer};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::hash::Hash;
 
