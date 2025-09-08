@@ -14,15 +14,6 @@ where
     Ok(map.into_iter().collect())
 }
 
-fn deserialize_completed<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    // Try to deserialize as a single string first, then wrap in Vec
-    let value = String::deserialize(deserializer)?;
-    Ok(vec![value])
-}
-
 #[derive(Deserialize, Debug, Clone, Serialize)]
 pub struct EnhancedHoi4Save {
     pub player: String,
