@@ -12,15 +12,17 @@ from generators import (
     NewsGenerator, 
     CountryNewsGenerator,
     CitizenInterviewGenerator,
+    LeaderSpeechGenerator,
     TwitterGenerator
 )
 
 class HOI4AIService:
     """Main AI service that coordinates generators and client"""
     
-    def __init__(self, ai_config: AIConfig = None):
+    def __init__(self, ai_config: AIConfig = None, debug_mode: bool = False):
         # Initialize AI client with logging enabled
         self.client = AIClient(ai_config, log_prompts=True)
+        self.debug_mode = debug_mode
         
         # Register all available generators
         self.generators = {
@@ -29,6 +31,7 @@ class HOI4AIService:
             'news': NewsGenerator(),
             'country_news': CountryNewsGenerator(),
             'citizen_interviews': CitizenInterviewGenerator(),
+            'leader_speech': LeaderSpeechGenerator(),
             'twitter': TwitterGenerator(),
         }
     
@@ -43,6 +46,10 @@ class HOI4AIService:
         
         # Generate the prompt
         prompt = generator.generate_prompt(game_data, **kwargs)
+        
+        # Debug mode: just return the prompt instead of calling AI
+        if self.debug_mode:
+            return f"=== DEBUG MODE - PROMPT FOR {report_type.upper()} ===\n\n{prompt}\n\n=== END PROMPT ===\nMax tokens: {generator.get_max_tokens()}"
         
         # Make the API call
         return self.client.generate_text(

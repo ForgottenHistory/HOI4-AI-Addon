@@ -11,7 +11,8 @@ from typing import Dict, Optional
 class HOI4Localizer:
     def __init__(self, hoi4_path: str = r"C:\Program Files (x86)\Steam\steamapps\common\Hearts of Iron IV"):
         self.hoi4_path = Path(hoi4_path)
-        self.localization_path = self.hoi4_path / "localisation" / "english"
+        self.project_locale_path = Path(__file__).parent.parent / "locale"
+        self.game_localization_path = self.hoi4_path / "localisation" / "english"
         self.translations: Dict[str, str] = {}
         self.loaded_files = set()
     
@@ -20,7 +21,11 @@ class HOI4Localizer:
         if filename in self.loaded_files:
             return 0
         
-        file_path = self.localization_path / filename
+        # Try project locale folder first
+        file_path = self.project_locale_path / filename
+        if not file_path.exists():
+            # Fallback to game localization folder
+            file_path = self.game_localization_path / filename
         
         if not file_path.exists():
             print(f"Warning: Localization file not found: {filename}")
@@ -73,14 +78,29 @@ class HOI4Localizer:
 
     def load_all_files(self):
         """Load ALL localization files"""
-        if not self.localization_path.exists():
-            print(f"Localization path not found: {self.localization_path}")
+        total_loaded = 0
+        yml_files = []
+        
+        # Load from project locale folder first
+        if self.project_locale_path.exists():
+            project_files = list(self.project_locale_path.glob("*_l_english.yml"))
+            yml_files.extend(project_files)
+            print(f"Found {len(project_files)} localization files in project locale folder")
+        
+        # Load from game localization folder (only files not already loaded from project)
+        if self.game_localization_path.exists():
+            game_files = list(self.game_localization_path.glob("*_l_english.yml"))
+            # Filter out files that we already have from the project
+            project_filenames = {f.name for f in yml_files}
+            new_game_files = [f for f in game_files if f.name not in project_filenames]
+            yml_files.extend(new_game_files)
+            print(f"Found {len(new_game_files)} additional localization files in game folder")
+        
+        if not yml_files:
+            print("No localization files found in either project or game folders")
             return 0
         
-        total_loaded = 0
-        yml_files = list(self.localization_path.glob("*_l_english.yml"))
-        
-        print(f"Found {len(yml_files)} localization files")
+        print(f"Total localization files to process: {len(yml_files)}")
         
         for file_path in yml_files:
             filename = file_path.name
@@ -117,8 +137,15 @@ class HOI4Localizer:
         cleaned = cleaned.replace('_', ' ').title()
         return cleaned
     
-    def get_country_name(self, tag: str) -> str:
-        """Get country name from tag"""
+    def get_country_name(self, tag: str, ideology: str = None) -> str:
+        """Get country name from tag, optionally with ideological variant"""
+        # Try ideological name first if ideology is provided
+        if ideology:
+            ideological_key = f"{tag}_{ideology}"
+            if ideological_key in self.translations:
+                return self.translations[ideological_key]
+        
+        # Try generic country name
         if tag in self.translations:
             return self.translations[tag]
         
@@ -151,11 +178,9 @@ def test_localizer():
     """Test the localization system"""
     localizer = HOI4Localizer()
     
-    if not localizer.localization_path.exists():
-        print(f"HOI4 path not found: {localizer.localization_path}")
-        return
-    
     print("Loading ALL localization files...")
+    print(f"Project locale path: {localizer.project_locale_path}")
+    print(f"Game localization path: {localizer.game_localization_path}")
     localizer.load_all_files()
     
     # Test some lookups

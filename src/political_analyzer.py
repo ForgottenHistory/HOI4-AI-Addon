@@ -31,12 +31,13 @@ class PoliticalAnalyzer:
         politics = country_data.get('politics', {})
         
         # Basic political data
+        ruling_party = politics.get('ruling_party', 'Unknown')
         analysis = PoliticalAnalysis(
             tag=tag,
-            name=self.localizer.get_country_name(tag),
+            name=self.localizer.get_country_name(tag, ruling_party),
             stability=country_data.get('stability', 0) * 100,
             war_support=country_data.get('war_support', 0) * 100,
-            ruling_party=politics.get('ruling_party', 'Unknown'),
+            ruling_party=ruling_party,
             political_power=politics.get('political_power', 0),
             elections_allowed=politics.get('elections_allowed', False),
             party_support={},

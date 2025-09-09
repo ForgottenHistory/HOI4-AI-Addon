@@ -10,3 +10,6 @@ game_data.json
 */countries/*
 __pycache__/
 */news_reports/*
+*/reports/*
+locale/*
+.claude/settings.local.json

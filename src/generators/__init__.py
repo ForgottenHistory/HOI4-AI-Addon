@@ -10,6 +10,7 @@ from .adviser_generator import AdviserGenerator
 from .news_generator import NewsGenerator
 from .country_news_generator import CountryNewsGenerator
 from .citizen_interview_generator import CitizenInterviewGenerator
+from .leader_speech_generator import LeaderSpeechGenerator
 from .twitter_generator import TwitterGenerator
 
 __all__ = [
@@ -19,5 +20,6 @@ __all__ = [
     'NewsGenerator',
     'CountryNewsGenerator',
     'CitizenInterviewGenerator',
+    'LeaderSpeechGenerator',
     'TwitterGenerator'
 ]

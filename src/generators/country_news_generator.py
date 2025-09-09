@@ -13,6 +13,7 @@ class CountryNewsGenerator(BaseGenerator):
     def generate_prompt(self, game_data: Dict[str, Any], **kwargs) -> str:
         focus_countries = kwargs.get('focus_countries', [])
         recent_events = kwargs.get('recent_events', [])
+        verbose = kwargs.get('verbose', False)
         
         if not focus_countries:
             return "No countries specified for news report."
@@ -23,7 +24,7 @@ class CountryNewsGenerator(BaseGenerator):
         # Build country context
         country_names = [c['name'] for c in focus_countries]
         country_context = self._build_country_context(focus_countries)
-        events_text = "\n".join([f"- {event}" for event in recent_events[-8:]])  # More events for country focus
+        events_text = self._format_events_for_country_news(recent_events[-8:], verbose=verbose)  # More events for country focus
         
         # Determine if this is a single country or multi-country report
         if len(focus_countries) == 1:
@@ -123,5 +124,26 @@ Use period-appropriate language, dramatic headlines, and the reporting style of 
         else:
             return f"Minimal war support ({war_support:.1f}% - strong anti-war sentiment)"
     
+    def _format_events_for_country_news(self, events, verbose=False):
+        """Format events with full descriptions for country news articles"""
+        if not events:
+            return ""
+        
+        if isinstance(events, list) and len(events) > 0 and isinstance(events[0], dict):
+            # New format with descriptions
+            formatted = []
+            for event in events:
+                formatted.append(f"- {event['title']}")
+                if event.get('description'):
+                    desc = event['description']
+                    # Only truncate if not verbose
+                    if not verbose and len(desc) > 200:
+                        desc = desc[:200] + "..."
+                    formatted.append(f"  Details: {desc}")
+            return "\n".join(formatted)
+        else:
+            # Old format (backwards compatibility)
+            return "\n".join([f"- {event}" for event in events])
+    
     def get_max_tokens(self) -> int:
-        return 1200  # Longer for detailed country analysis
+        return 1400  # Increased for richer descriptions
