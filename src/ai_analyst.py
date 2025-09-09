@@ -10,6 +10,8 @@ from generators import (
     IntelligenceGenerator, 
     AdviserGenerator, 
     NewsGenerator, 
+    CountryNewsGenerator,
+    CitizenInterviewGenerator,
     TwitterGenerator
 )
 
@@ -25,6 +27,8 @@ class HOI4AIService:
             'intelligence': IntelligenceGenerator(),
             'adviser': AdviserGenerator(),
             'news': NewsGenerator(),
+            'country_news': CountryNewsGenerator(),
+            'citizen_interviews': CitizenInterviewGenerator(),
             'twitter': TwitterGenerator(),
         }
     

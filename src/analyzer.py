@@ -235,14 +235,14 @@ def main():
     analyzer.print_player_details()
     
     # Generate AI analysis
-    print("\n" + "="*50)
-    print("🤖 GENERATING AI ANALYSIS...")
-    print("="*50)
+    # print("\n" + "="*50)
+    # print("🤖 GENERATING AI ANALYSIS...")
+    # print("="*50)
     
     # Choose one of these options:
     
     # Option 1: Generate all reports
-    analyzer.generate_all_reports()
+    # analyzer.generate_all_reports()
     
     # Option 2: Generate single report (comment out line above, uncomment one below)
     # analyzer.generate_ai_report('intelligence')  # Diplomatic briefing
