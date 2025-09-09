@@ -12,3 +12,4 @@ src/__pycache__/
 src/generators/__pycache__/
 src/.env
 CLAUDE.md
+*/countries/*
