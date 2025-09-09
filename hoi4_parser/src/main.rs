@@ -13,23 +13,100 @@ use regex::Regex;
 fn extract_completed_focuses(save_content: &str) -> BTreeMap<String, Vec<String>> {
     let mut completed_by_country = BTreeMap::new();
     
-    // Regex to find country sections and their completed focuses
-    let country_regex = Regex::new(r"([A-Z]{3})=\{[\s\S]*?focus=\{([\s\S]*?)\}").unwrap();
+    // Look for the unique pattern: TAG={\n\t\tinstances_counter=
+    // This guarantees we're in the actual country section
+    let country_pattern = Regex::new(r"(?m)^\t([A-Z]{3})=\{\n\t\tinstances_counter=").unwrap();
     let completed_regex = Regex::new(r#"completed="([^"]+)""#).unwrap();
     
-    for country_cap in country_regex.captures_iter(save_content) {
-        let country_tag = country_cap[1].to_string();
-        let focus_section = &country_cap[2];
+    // Find all country sections with this unique pattern
+    let mut country_matches: Vec<(String, usize)> = Vec::new();
+    for cap in country_pattern.captures_iter(save_content) {
+        let tag = cap[1].to_string();
+        let pos = cap.get(0).unwrap().start();
+        country_matches.push((tag, pos));
+    }
+    
+    println!("Found {} countries with instances_counter pattern", country_matches.len());
+    
+    // Process each country
+    for i in 0..country_matches.len() {
+        let (country_tag, start_pos) = &country_matches[i];
         
-        let mut completed_focuses = Vec::new();
-        for completed_cap in completed_regex.captures_iter(focus_section) {
-            completed_focuses.push(completed_cap[1].to_string());
+        // Find where this country's section starts (at the TAG={ part)
+        let country_def_start = start_pos + 1; // Skip the initial tab
+        
+        // Find the end of this country's section
+        // Start after "TAG={"
+        let search_start = country_def_start + country_tag.len() + 2;
+        
+        // Count braces to find the end of this country's data
+        let mut brace_count = 1;
+        let mut country_end = search_start;
+        
+        for (idx, ch) in save_content[search_start..].char_indices() {
+            if ch == '{' {
+                brace_count += 1;
+            } else if ch == '}' {
+                brace_count -= 1;
+                if brace_count == 0 {
+                    country_end = search_start + idx;
+                    break;
+                }
+            }
         }
         
-        if !completed_focuses.is_empty() {
-            completed_by_country.insert(country_tag, completed_focuses);
+        // Extract this country's entire section
+        let country_section = &save_content[country_def_start..country_end];
+        
+        // Look for focus block within this country's section
+        if let Some(focus_start) = country_section.find("\t\tfocus={") {
+            // Find the matching closing brace for the focus block
+            let focus_content_start = focus_start + 9; // Skip "\t\tfocus={"
+            let mut brace_count = 1;
+            let mut focus_end = focus_content_start;
+            
+            for (idx, ch) in country_section[focus_content_start..].char_indices() {
+                if ch == '{' {
+                    brace_count += 1;
+                } else if ch == '}' {
+                    brace_count -= 1;
+                    if brace_count == 0 {
+                        focus_end = focus_content_start + idx;
+                        break;
+                    }
+                }
+            }
+            
+            // Extract completed focuses from this country's focus block
+            let focus_content = &country_section[focus_content_start..focus_end];
+            let mut completed_focuses = Vec::new();
+            
+            for completed_cap in completed_regex.captures_iter(focus_content) {
+                completed_focuses.push(completed_cap[1].to_string());
+            }
+            
+            if !completed_focuses.is_empty() {
+                println!("  {} has {} completed focuses: {:?}", 
+                    country_tag, completed_focuses.len(), &completed_focuses);
+                completed_by_country.insert(country_tag.clone(), completed_focuses);
+            } else if focus_content.contains("completed") {
+                println!("  {} has 'completed' in focus but regex didn't match", country_tag);
+                // Show a sample for debugging
+                if let Some(idx) = focus_content.find("completed") {
+                    let sample_start = idx.saturating_sub(20);
+                    let sample_end = (idx + 50).min(focus_content.len());
+                    println!("    Sample: {:?}", &focus_content[sample_start..sample_end]);
+                }
+            }
+        } else {
+            // Try without tabs in case formatting varies
+            if country_section.contains("focus={") {
+                println!("  {} has focus block but not with expected tab formatting", country_tag);
+            }
         }
     }
+    
+    println!("Total countries with completed focuses: {}", completed_by_country.len());
     
     completed_by_country
 }
