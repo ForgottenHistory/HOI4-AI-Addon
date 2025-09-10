@@ -131,11 +131,24 @@ class PersonaLoader:
         journalists = [p for p in candidates if 'journalists' in p.get('categories', []) or 'journalist' in p.get('id', '').lower()]
         other_personas = [p for p in candidates if p not in citizens and p not in journalists]
         
-        # 50% chance for citizens (common people voices)
-        if citizens and random.random() < 0.5:
+        # Get configuration values (with fallbacks for if config isn't available)
+        try:
+            import sys
+            import os
+            sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'streamer-tools', 'twitter-feed'))
+            from config_loader import get_citizen_boost, get_journalist_avoid
+            citizen_boost = get_citizen_boost()
+            journalist_avoid = get_journalist_avoid()
+        except ImportError:
+            # Fallback to hardcoded values if config system not available
+            citizen_boost = 0.5
+            journalist_avoid = 0.85
+        
+        # Configurable chance for citizens (common people voices)
+        if citizens and random.random() < citizen_boost:
             candidates = citizens
-        # 85% chance to avoid journalists (they're boring!)
-        elif other_personas and random.random() < 0.85:
+        # Configurable chance to avoid journalists
+        elif other_personas and random.random() < journalist_avoid:
             candidates = other_personas
         
         # If we have a target country, try to create country-specific personas
@@ -155,11 +168,27 @@ class PersonaLoader:
                     official_templates = [p for p in country_templates if 'minister' in p.get('id', '') or 'government' in p.get('id', '')]
                     other_templates = [p for p in country_templates if p not in leader_templates and p not in official_templates]
                     
-                    # Equal chances for all persona types (comedic variety!)
-                    all_templates = leader_templates + official_templates + other_templates
-                    if all_templates:
-                        selected_template = random.choice(all_templates)
-                        return self.template_processor.process_persona_template(selected_template, game_data, country)
+                    # Configurable chances for different persona types
+                    try:
+                        from config_loader import get_leader_chance
+                        leader_chance = get_leader_chance()
+                    except ImportError:
+                        leader_chance = 0.6
+                    
+                    # Prioritize leaders based on configuration
+                    if leader_templates and random.random() < leader_chance:
+                        selected_template = random.choice(leader_templates)
+                    elif official_templates and random.random() < 0.7:  # 70% chance for officials if not leader
+                        selected_template = random.choice(official_templates)
+                    else:
+                        # Fall back to any available template
+                        all_templates = leader_templates + official_templates + other_templates
+                        if all_templates:
+                            selected_template = random.choice(all_templates)
+                        else:
+                            return self._get_fallback_persona(game_data, country)
+                    
+                    return self.template_processor.process_persona_template(selected_template, game_data, country)
         
         selected_template = random.choice(candidates)
         

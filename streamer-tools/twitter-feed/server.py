@@ -212,13 +212,23 @@ def start_auto_generation():
                     except Exception as e:
                         print(f"Error in auto generation: {e}")
                     
-                    # Wait 15 seconds
-                    time.sleep(30)
+                    # Wait according to configuration
+                    try:
+                        from config_loader import get_auto_interval
+                        interval = get_auto_interval()
+                    except ImportError:
+                        interval = 30  # Default fallback
+                    time.sleep(interval)
             
             auto_thread = threading.Thread(target=run_auto_with_feed, daemon=True)
             auto_thread.start()
             
-            return jsonify({'success': True, 'message': 'Auto generation started (15s interval)'})
+            try:
+                from config_loader import get_auto_interval
+                interval = get_auto_interval()
+                return jsonify({'success': True, 'message': f'Auto generation started ({interval}s interval)'})
+            except ImportError:
+                return jsonify({'success': True, 'message': 'Auto generation started (30s interval)'})
         else:
             return jsonify({'success': False, 'message': 'AI components not available'})
             

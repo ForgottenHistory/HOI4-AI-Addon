@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Write;
+use std::env;
 use hoi4save::{Hoi4File, PdsDate};
 use serde_json;
 
@@ -130,8 +131,19 @@ fn extract_character_names(save_content: &str) -> HashMap<i32, String> {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let save_path = "autosave.hoi4";
-    let output_path = "../data/game_data.json";
+    let args: Vec<String> = env::args().collect();
+    
+    let save_path = if args.len() > 1 {
+        &args[1]
+    } else {
+        "autosave.hoi4"
+    };
+    
+    let output_path = if args.len() > 2 {
+        &args[2]
+    } else {
+        "../data/game_data.json"
+    };
     
     println!("Parsing HOI4 save file: {}", save_path);
     

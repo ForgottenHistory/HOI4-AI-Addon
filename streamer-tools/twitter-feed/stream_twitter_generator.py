@@ -145,9 +145,6 @@ Generate only ONE tweet, nothing else."""
             if enhanced_description and enhanced_description.lower() != description.lower():
                 context_parts.append(f"POLICY DETAILS: {enhanced_description}")
             
-            if progress > 0:
-                context_parts.append(f"PROGRESS: {progress:.0f}% complete")
-        
         # Current date for historical context
         if 'metadata' in game_data:
             date = game_data['metadata'].get('date', '1936.01.01')
