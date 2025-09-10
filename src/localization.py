@@ -117,13 +117,34 @@ class HOI4Localizer:
     def get_localized_text(self, key: str) -> str:
         """Get localized text for a key, return key if not found"""
         if key in self.translations:
-            return self.translations[key]
+            result = self.translations[key]
+            
+            # Handle $variable$ references (e.g., "$leon_blum$" -> "Léon Blum")
+            if result.startswith('$') and result.endswith('$') and len(result) > 2:
+                referenced_key = result[1:-1]  # Remove $ symbols
+                if referenced_key in self.translations:
+                    return self.translations[referenced_key]
+                # Try variations of the referenced key
+                for variant in [referenced_key.lower(), referenced_key.upper()]:
+                    if variant in self.translations:
+                        return self.translations[variant]
+                # If reference not found, return the cleaned referenced key
+                return self._clean_key_for_display(referenced_key)
+            
+            return result
         
         # Try variations
         variations = [key.lower(), key.upper()]
         for variant in variations:
             if variant in self.translations:
-                return self.translations[variant]
+                result = self.translations[variant]
+                # Handle $variable$ references in variations too
+                if result.startswith('$') and result.endswith('$') and len(result) > 2:
+                    referenced_key = result[1:-1]
+                    if referenced_key in self.translations:
+                        return self.translations[referenced_key]
+                    return self._clean_key_for_display(referenced_key)
+                return result
         
         # If not found, return a cleaned version
         return self._clean_key_for_display(key)

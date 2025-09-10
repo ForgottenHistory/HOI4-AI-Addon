@@ -14,7 +14,8 @@ from pathlib import Path
 import sys
 sys.path.append(str(Path(__file__).parent.parent.parent / 'src'))
 
-from generators.twitter_generator import TwitterGenerator
+# Import the streaming-optimized generator instead of the old one
+from stream_twitter_generator import StreamTwitterGenerator
 from ai_client import AIClient
 
 class StreamTwitterFeed:
@@ -22,7 +23,7 @@ class StreamTwitterFeed:
     
     def __init__(self, game_data_path: str = None):
         self.game_data_path = game_data_path or "../game_data.json"
-        self.twitter_generator = TwitterGenerator()
+        self.twitter_generator = StreamTwitterGenerator()  # Use streaming-optimized generator
         self.ai_client = AIClient()
         self.last_processed_events = set()
         self.feed_data = {
@@ -70,13 +71,58 @@ class StreamTwitterFeed:
             return f"{event.get('title', '')}_{event.get('date', time.time())}"
         return str(hash(str(event)))
     
+    def _format_event_data(self, event) -> Dict:
+        """Format event for the streaming generator"""
+        if isinstance(event, dict):
+            return {
+                'title': event.get('title', 'Event reported'),
+                'description': event.get('description', ''),
+                'type': event.get('type', 'general'),
+                'country': event.get('country'),
+                'date': event.get('date')
+            }
+        else:
+            # Handle string events - try to parse some info
+            event_str = str(event)
+            
+            # Try to extract country from event string
+            country = None
+            for country_name, tag in [
+                ('Germany', 'GER'), ('Soviet', 'SOV'), ('Russia', 'SOV'), 
+                ('America', 'USA'), ('Britain', 'ENG'), ('France', 'FRA'),
+                ('Italy', 'ITA'), ('Japan', 'JAP'), ('China', 'CHI')
+            ]:
+                if country_name.lower() in event_str.lower():
+                    country = tag
+                    break
+            
+            # Determine event type from content
+            event_type = 'general'
+            if any(word in event_str.lower() for word in ['focus', 'policy', 'pursue']):
+                event_type = 'focus_ongoing'
+            elif any(word in event_str.lower() for word in ['war', 'attack', 'invade']):
+                event_type = 'war'
+            elif any(word in event_str.lower() for word in ['complete', 'finished']):
+                event_type = 'focus_completed'
+            
+            return {
+                'title': event_str,
+                'description': '',
+                'type': event_type,
+                'country': country,
+                'date': None
+            }
+    
     def _generate_event_tweets(self, event, game_data: Dict) -> List[Dict]:
         """Generate tweets for a specific event using AI"""
         try:
-            # Use existing twitter generator with event context
+            # Format event data for the streaming generator
+            event_data = self._format_event_data(event)
+            
+            # Use streaming twitter generator with proper event_data parameter
             prompt = self.twitter_generator.generate_prompt(
-                game_data, 
-                recent_events=[event]
+                game_data,
+                event_data=event_data
             )
             
             # Generate AI response

@@ -6,6 +6,11 @@ Analyzes national focus progress and completed focuses
 
 from typing import Dict, List, Any, Optional
 from dataclasses import dataclass
+# Import shared utilities to replace duplicate functions
+import sys
+import os
+sys.path.append(os.path.dirname(__file__))
+from services.utils import has_dynamic_text, truncate_description
 
 @dataclass
 class FocusAnalysis:
@@ -47,11 +52,11 @@ class FocusAnalyzer:
         if current_focus:
             localized_name = self.localizer.get_localized_text(current_focus)
             # Only use the focus if it doesn't have dynamic text
-            if not self._has_dynamic_text(localized_name):
+            if not has_dynamic_text(localized_name):
                 current_focus_name = localized_name
                 # Also check description for dynamic text
                 description = self.get_focus_description(current_focus, truncate=False)
-                if self._has_dynamic_text(description):
+                if has_dynamic_text(description):
                     current_focus_name = None  # Filter out if description has dynamic text
             else:
                 current_focus = None  # Clear the raw focus ID too
@@ -60,7 +65,7 @@ class FocusAnalyzer:
         for focus in completed:
             focus_name = self.localizer.get_localized_text(focus)
             # Only include completed focuses without dynamic text
-            if not self._has_dynamic_text(focus_name):
+            if not has_dynamic_text(focus_name):
                 completed_focus_names.append(focus_name)
         
         return FocusAnalysis(
@@ -118,7 +123,7 @@ class FocusAnalyzer:
             
             if show_completed and analysis.completed_focus_names:
                 # Filter out completed focuses with dynamic text
-                clean_completed = [focus for focus in analysis.completed_focus_names[-3:] if not self._has_dynamic_text(focus)]
+                clean_completed = [focus for focus in analysis.completed_focus_names[-3:] if not has_dynamic_text(focus)]
                 if clean_completed:
                     lines.append(f"Recent: {', '.join(clean_completed)}")
         
@@ -136,14 +141,9 @@ class FocusAnalyzer:
         if description == desc_key:
             return ""
         
-        if description and truncate:
-            # Clean up and truncate for regular mode
-            description = description.replace('\\n', ' ').strip()
-            if len(description) > 150:
-                description = description[:150] + "..."
-        elif description:
-            # Just clean up newlines for verbose mode
-            description = description.replace('\\n', ' ').strip()
+        if description:
+            # Use shared utility for consistent text processing
+            description = truncate_description(description, truncate=truncate, max_length=150)
         
         return description
     
@@ -165,14 +165,13 @@ class FocusAnalyzer:
             
             if analysis.completed_focus_names:
                 # Filter out completed focuses with dynamic text
-                clean_completed = [focus for focus in analysis.completed_focus_names[-3:] if not self._has_dynamic_text(focus)]
+                clean_completed = [focus for focus in analysis.completed_focus_names[-3:] if not has_dynamic_text(focus)]
                 if clean_completed:
                     lines.append(f"Recent: {', '.join(clean_completed)}")
         
         return '\n    '.join(lines) if lines else "No focus activity"
     
+    # Legacy compatibility: redirect to shared utility
     def _has_dynamic_text(self, text: str) -> bool:
-        """Check if text contains dynamic placeholders (any square brackets)"""
-        if not text:
-            return False
-        return '[' in text and ']' in text
+        """Legacy method - use services.utils.has_dynamic_text instead"""
+        return has_dynamic_text(text)

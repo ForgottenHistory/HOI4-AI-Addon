@@ -43,8 +43,9 @@ class AutoTweetGenerator:
         if AI_AVAILABLE:
             self.stream_generator = StreamTwitterGenerator()
             self.ai_client = AIClient()
-            # Use the localizer from stream_generator that already has files loaded
+            # Use the localizer from stream_generator that already has ALL files loaded
             self.localizer = self.stream_generator.localizer
+            print(f"AutoTweetGenerator using localizer with {len(self.localizer.translations)} translations")
         else:
             self.stream_generator = None
             self.ai_client = None
@@ -54,7 +55,7 @@ class AutoTweetGenerator:
         """Load current game data"""
         try:
             if self.data_path.exists():
-                with open(self.data_path, 'r') as f:
+                with open(self.data_path, 'r', encoding='utf-8') as f:
                     return json.load(f)
         except Exception as e:
             print(f"Error loading game data: {e}")
@@ -97,7 +98,8 @@ class AutoTweetGenerator:
             progress = focus.get('progress', 0)
             
             if current_focus:
-                focus_name = self._clean_focus_name(current_focus, country_tag)
+                # Get proper focus information using the localization system
+                focus_name = self._get_focus_name_for_display(current_focus, country_tag)
                 focus_description = self._get_focus_description(current_focus, country_tag)
                 
                 if progress > 80:
@@ -106,7 +108,9 @@ class AutoTweetGenerator:
                         'country': country_tag,
                         'title': f'{self._get_country_name(country_tag)} nears completion of {focus_name}',
                         'description': focus_description,
-                        'priority': 'high' if country_data.get('major') else 'medium'
+                        'priority': 'high' if country_data.get('major') else 'medium',
+                        'focus_id': current_focus,  # Include original focus ID for better processing
+                        'progress': progress
                     })
                 elif progress > 50:
                     events.append({
@@ -114,7 +118,9 @@ class AutoTweetGenerator:
                         'country': country_tag,
                         'title': f'{self._get_country_name(country_tag)} makes progress on {focus_name}',
                         'description': focus_description,
-                        'priority': 'medium' if country_data.get('major') else 'low'
+                        'priority': 'medium' if country_data.get('major') else 'low',
+                        'focus_id': current_focus,
+                        'progress': progress
                     })
                 else:
                     events.append({
@@ -122,7 +128,9 @@ class AutoTweetGenerator:
                         'country': country_tag,
                         'title': f'{self._get_country_name(country_tag)} pursues {focus_name}',
                         'description': focus_description,
-                        'priority': 'medium' if country_data.get('major') else 'low'
+                        'priority': 'medium' if country_data.get('major') else 'low',
+                        'focus_id': current_focus,
+                        'progress': progress
                     })
             
             # Look for events data if available
@@ -217,6 +225,24 @@ class AutoTweetGenerator:
         # Replace underscores with spaces and title case
         clean = clean.replace("_", " ").title()
         return clean
+    
+    def _get_focus_name_for_display(self, focus_id: str, country_tag: str) -> str:
+        """Get proper focus name for display, preferring localized names"""
+        if not self.localizer:
+            return self._clean_focus_name(focus_id, country_tag)
+        
+        # Try to get localized focus name first
+        localized_name = self.localizer.get_localized_text(focus_id)
+        if localized_name != focus_id and localized_name:
+            return localized_name
+        
+        # Try uppercase variation
+        localized_upper = self.localizer.get_localized_text(focus_id.upper())
+        if localized_upper != focus_id.upper() and localized_upper:
+            return localized_upper
+        
+        # Fall back to cleaned name
+        return self._clean_focus_name(focus_id, country_tag)
     
     def _get_country_name(self, country_tag: str) -> str:
         """Get readable country name"""

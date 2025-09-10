@@ -5,7 +5,7 @@ use hoi4save::{Hoi4File, PdsDate};
 use serde_json;
 
 mod enhanced_country;
-use enhanced_country::{EnhancedHoi4Save};
+use enhanced_country::{EnhancedHoi4Save, DatabaseCharacter};
 
 use std::collections::BTreeMap;
 use regex::Regex;
@@ -111,6 +111,24 @@ fn extract_completed_focuses(save_content: &str) -> BTreeMap<String, Vec<String>
     completed_by_country
 }
 
+fn extract_character_names(save_content: &str) -> HashMap<i32, String> {
+    let mut character_names = HashMap::new();
+    
+    // Look for character database entries
+    let character_pattern = Regex::new(r#"character=\{\s*id=\{\s*id=(\d+)\s+type=\d+\s*\}\s*[^}]*?name="([^"]+)""#).unwrap();
+    
+    for cap in character_pattern.captures_iter(save_content) {
+        if let Ok(id) = cap[1].parse::<i32>() {
+            let name = cap[2].to_string();
+            println!("Found character: ID {} -> {}", id, name);
+            character_names.insert(id, name);
+        }
+    }
+    
+    println!("Extracted {} character names", character_names.len());
+    character_names
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let save_path = "autosave.hoi4";
     let output_path = "../data/game_data.json";
@@ -128,6 +146,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Extract completed focuses before main parsing
     println!("Extracting completed focuses...");
     let completed_focuses = extract_completed_focuses(&save_content);
+    
+    // Extract character names
+    println!("Extracting character names...");
+    let character_names = extract_character_names(&save_content);
     
     let save_file = Hoi4File::from_slice(&data)?;
     let resolver = HashMap::<u16, &str>::new();
@@ -178,6 +200,27 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Some(completed) = completed_focuses.get(tag.as_str()) {
                 if let Some(focus) = country_data.get_mut("focus") {
                     focus["completed"] = serde_json::json!(completed);
+                }
+            }
+            
+            // Enrich character data with names
+            if let Some(politics) = country_data.get_mut("politics") {
+                if let Some(parties) = politics.get_mut("parties") {
+                    for (_, party) in parties.as_object_mut().unwrap() {
+                        if let Some(country_leaders) = party.get_mut("country_leader") {
+                            if let Some(leaders_array) = country_leaders.as_array_mut() {
+                                for leader in leaders_array {
+                                    if let Some(character) = leader.get_mut("character") {
+                                        if let Some(id) = character.get("id").and_then(|id| id.as_i64()) {
+                                            if let Some(name) = character_names.get(&(id as i32)) {
+                                                character.as_object_mut().unwrap().insert("name".to_string(), serde_json::json!(name));
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
             

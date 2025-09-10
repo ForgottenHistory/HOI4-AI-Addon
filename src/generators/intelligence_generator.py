@@ -6,6 +6,11 @@ Generates formal diplomatic intelligence briefings
 
 from typing import Dict, Any
 from .base_generator import BaseGenerator
+# Import shared utilities
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+from services.utils import get_major_power_tags
 
 class IntelligenceGenerator(BaseGenerator):
     """Generates diplomatic intelligence briefings"""
@@ -81,7 +86,7 @@ Write in the style of a 1930s diplomatic cable - serious but engaging."""
                 context_parts.append(f"Major Powers Analysis:\n" + "\n".join(powers_info))
         else:
             # Fallback to old format
-            major_powers = ['GER', 'SOV', 'USA', 'ENG', 'FRA', 'ITA', 'JAP']
+            major_powers = list(get_major_power_tags())
             powers_info = []
             
             for country in game_data.get('countries', []):

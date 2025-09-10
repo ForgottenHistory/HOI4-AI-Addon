@@ -11,6 +11,12 @@ from political_analyzer import PoliticalAnalyzer
 from focus_analyzer import FocusAnalyzer
 from event_analyzer import EventAnalyzer
 from ai_analyst import HOI4AIService
+# Import services for consolidated functionality
+import sys
+import os
+sys.path.append(os.path.dirname(__file__))
+from services import ServiceContainer
+from services.utils import get_major_power_tags, has_dynamic_text
 
 class GlobalAnalyzer:
     """
@@ -31,6 +37,15 @@ class GlobalAnalyzer:
         self.political_analyzer = PoliticalAnalyzer(localizer)
         self.focus_analyzer = FocusAnalyzer(localizer)
         self.event_analyzer = EventAnalyzer(localizer)
+        
+        # Initialize service container for consolidated functionality
+        self.services = ServiceContainer.create_from_existing_components(
+            localizer=localizer,
+            game_data_loader=data_loader,
+            event_analyzer=self.event_analyzer,
+            focus_analyzer=self.focus_analyzer,
+            political_analyzer=self.political_analyzer
+        )
     
     def generate_report(self, generator_type: str, verbose: bool = False) -> str:
         """Generate global scope reports"""
@@ -84,7 +99,7 @@ class GlobalAnalyzer:
     
     def _analyze_major_powers(self) -> list[Dict[str, Any]]:
         """Analyze all major powers for global context"""
-        major_tags = ['GER', 'SOV', 'USA', 'ENG', 'FRA', 'ITA', 'JAP']
+        major_tags = list(get_major_power_tags())
         major_powers = []
         
         for tag in major_tags:
@@ -118,7 +133,7 @@ class GlobalAnalyzer:
     
     def _analyze_major_powers_with_descriptions(self) -> list[Dict[str, Any]]:
         """Analyze all major powers with focus descriptions for AI generation"""
-        major_tags = ['GER', 'SOV', 'USA', 'ENG', 'FRA', 'ITA', 'JAP']
+        major_tags = list(get_major_power_tags())
         major_powers = []
         
         for tag in major_tags:
@@ -161,7 +176,7 @@ class GlobalAnalyzer:
             
             event_data = {
                 'title': clean_event,
-                'description': description if description and not self.event_analyzer._has_dynamic_text(description) else ""
+                'description': description if description and not has_dynamic_text(description) else ""
             }
             events_with_descriptions.append(event_data)
         
@@ -237,7 +252,7 @@ class GlobalAnalyzer:
                 
                 # Get event description (truncated for regular mode, full for verbose)
                 description = self.event_analyzer._get_event_description(raw_event, truncate=not verbose)
-                if description and not self.event_analyzer._has_dynamic_text(description):
+                if description and not has_dynamic_text(description):
                     print(f"      {description}")
                 if verbose:
                     print()  # Extra line between events in verbose mode
@@ -247,7 +262,7 @@ class GlobalAnalyzer:
     def _print_major_powers_section(self, verbose: bool = False):
         """Print major powers status section"""
         print(f"\n🏛️ MAJOR POWER STATUS:")
-        major_tags = ['GER', 'SOV', 'USA', 'ENG', 'FRA', 'ITA', 'JAP']
+        major_tags = list(get_major_power_tags())
         
         for tag in major_tags:
             country_data = self.data_loader.get_country(tag)

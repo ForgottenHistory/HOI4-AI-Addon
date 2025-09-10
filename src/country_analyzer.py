@@ -11,6 +11,11 @@ from political_analyzer import PoliticalAnalyzer
 from focus_analyzer import FocusAnalyzer
 from event_analyzer import EventAnalyzer
 from ai_analyst import HOI4AIService
+# Import shared utilities
+import sys
+import os
+sys.path.append(os.path.dirname(__file__))
+from services.utils import is_major_power
 
 class CountryAnalyzer:
     """
@@ -99,7 +104,7 @@ class CountryAnalyzer:
                 'political': political,
                 'focus': focus,
                 'is_player': tag == metadata.get('player'),
-                'is_major_power': tag in ['GER', 'SOV', 'USA', 'ENG', 'FRA', 'ITA', 'JAP']
+                'is_major_power': is_major_power(tag)
             }
             country_summaries.append(country_summary)
             
@@ -223,7 +228,7 @@ class CountryAnalyzer:
         # Check if player or major power
         if country_tag == metadata.get('player'):
             print("Status: 🎮 PLAYER NATION")
-        if country_tag in ['GER', 'SOV', 'USA', 'ENG', 'FRA', 'ITA', 'JAP']:
+        if is_major_power(country_tag):
             print("Status: 🌟 MAJOR POWER")
         
         print("="*60)

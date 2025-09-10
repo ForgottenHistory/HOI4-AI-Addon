@@ -126,27 +126,40 @@ class PersonaLoader:
         if not candidates:
             return self._get_fallback_persona(game_data, country)
         
+        # Boost citizens first, then reduce journalist frequency
+        citizens = [p for p in candidates if 'citizens' in p.get('categories', []) or 'citizen' in p.get('id', '').lower()]
+        journalists = [p for p in candidates if 'journalists' in p.get('categories', []) or 'journalist' in p.get('id', '').lower()]
+        other_personas = [p for p in candidates if p not in citizens and p not in journalists]
+        
+        # 50% chance for citizens (common people voices)
+        if citizens and random.random() < 0.5:
+            candidates = citizens
+        # 85% chance to avoid journalists (they're boring!)
+        elif other_personas and random.random() < 0.85:
+            candidates = other_personas
+        
         # If we have a target country, try to create country-specific personas
         if country and game_data:
-            # Higher chance for leaders on political events
-            leader_boost = 0.6 if event_type in ['politics', 'war', 'crisis'] else 0.4
+            # High chance for country-specific personas for variety
+            country_boost = 0.7
             
             # Try to generate a country-specific persona from templates
-            if random.random() < leader_boost:
+            if random.random() < country_boost:
                 country_templates = [p for p in self.personas.values() 
                                    if self._is_template(p) and self._is_country_template(p)]
                 
-                # If it's a political event, prefer leader templates
-                if event_type in ['politics', 'war', 'crisis'] and country_templates:
-                    leader_templates = [p for p in country_templates if 'leader' in p.get('id', '').lower()]
-                    if leader_templates and random.random() < 0.5:  # 50% chance for leader on political events
-                        selected_template = random.choice(leader_templates)
-                        return self.template_processor.process_persona_template(selected_template, game_data, country)
-                
-                # Otherwise pick any country template
+                # Let all persona types respond to all events for comedic variety
                 if country_templates:
-                    selected_template = random.choice(country_templates)
-                    return self.template_processor.process_persona_template(selected_template, game_data, country)
+                    # Categorize templates by type
+                    leader_templates = [p for p in country_templates if 'country_leader_official' in p.get('id', '')]
+                    official_templates = [p for p in country_templates if 'minister' in p.get('id', '') or 'government' in p.get('id', '')]
+                    other_templates = [p for p in country_templates if p not in leader_templates and p not in official_templates]
+                    
+                    # Equal chances for all persona types (comedic variety!)
+                    all_templates = leader_templates + official_templates + other_templates
+                    if all_templates:
+                        selected_template = random.choice(all_templates)
+                        return self.template_processor.process_persona_template(selected_template, game_data, country)
         
         selected_template = random.choice(candidates)
         

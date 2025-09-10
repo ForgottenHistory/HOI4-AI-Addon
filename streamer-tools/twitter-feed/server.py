@@ -213,7 +213,7 @@ def start_auto_generation():
                         print(f"Error in auto generation: {e}")
                     
                     # Wait 15 seconds
-                    time.sleep(15)
+                    time.sleep(30)
             
             auto_thread = threading.Thread(target=run_auto_with_feed, daemon=True)
             auto_thread.start()
@@ -290,7 +290,7 @@ def load_real_game_data():
     for path in game_data_paths:
         try:
             if path.exists():
-                with open(path, 'r') as f:
+                with open(path, 'r', encoding='utf-8') as f:
                     game_data = json.load(f)
                     print(f"Loaded real game data from {path}")
                     return game_data

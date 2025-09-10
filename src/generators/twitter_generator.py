@@ -6,6 +6,11 @@ Generates Twitter-like social media posts from 1930s world leaders
 
 from typing import Dict, List, Any
 from .base_generator import BaseGenerator
+# Import shared utilities
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+from services.utils import get_major_power_tags
 
 class TwitterGenerator(BaseGenerator):
     """Generates Twitter-like social media posts from 1930s world leaders"""
@@ -98,7 +103,7 @@ Make it feel like real political Twitter discourse from 1936."""
                 context_parts.append(f"Current Focus Activities:\n" + "\n".join(focus_activities))
         else:
             # Fallback to old format
-            major_powers = ['GER', 'SOV', 'USA', 'ENG', 'FRA', 'ITA', 'JAP']
+            major_powers = list(get_major_power_tags())
             powers_info = []
             focus_activities = []
             

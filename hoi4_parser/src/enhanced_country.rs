@@ -25,6 +25,25 @@ pub struct EnhancedHoi4Save {
 }
 
 #[derive(Deserialize, Debug, Clone, Serialize)]
+pub struct DatabaseCharacter {
+    pub id: CharacterId,
+    #[serde(default)]
+    pub token: Option<String>,
+    #[serde(default)]
+    pub template: Option<String>,
+    #[serde(default)]
+    pub name: Option<String>,
+    #[serde(default)]
+    pub country: Option<String>,
+}
+
+#[derive(Deserialize, Debug, Clone, Serialize)]
+pub struct CharacterId {
+    pub id: i32,
+    pub r#type: i32,
+}
+
+#[derive(Deserialize, Debug, Clone, Serialize)]
 pub struct EnhancedCountry {
     #[serde(default)]
     pub stability: f64,
@@ -100,4 +119,6 @@ pub struct Character {
     pub id: Option<i32>,
     #[serde(default)]
     pub r#type: Option<i32>,
+    #[serde(default)]
+    pub name: Option<String>,
 }

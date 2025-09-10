@@ -45,11 +45,32 @@ class PersonaTemplateProcessor:
                 if '_conditional' in value:
                     processed_persona[key] = self._process_conditional(value, context)
                 else:
-                    processed_persona[key] = value
+                    # Recursively process nested dictionaries
+                    processed_persona[key] = self._process_nested_dict(value, context)
             else:
                 processed_persona[key] = value
         
         return processed_persona
+    
+    def _process_nested_dict(self, nested_dict: Dict, context: Dict) -> Dict:
+        """Recursively process nested dictionaries"""
+        processed_dict = {}
+        for key, value in nested_dict.items():
+            if isinstance(value, str):
+                processed_dict[key] = self._process_template_string(value, context)
+            elif isinstance(value, list):
+                processed_dict[key] = [
+                    self._process_template_string(item, context) if isinstance(item, str) else item 
+                    for item in value
+                ]
+            elif isinstance(value, dict):
+                if '_conditional' in value:
+                    processed_dict[key] = self._process_conditional(value, context)
+                else:
+                    processed_dict[key] = self._process_nested_dict(value, context)
+            else:
+                processed_dict[key] = value
+        return processed_dict
     
     def _process_template_string(self, template_str: str, context: Dict) -> str:
         """Process a template string with placeholders"""
@@ -114,6 +135,8 @@ class PersonaTemplateProcessor:
             return target_country
         elif placeholder == 'country_adjective' and target_country:
             return self._get_country_adjective(target_country)
+        elif placeholder == 'ideological_country_name' and target_country:
+            return self._get_ideological_country_name(country_data, target_country)
         
         # Leader placeholders
         elif placeholder == 'current_leader' and country_data:
@@ -136,6 +159,24 @@ class PersonaTemplateProcessor:
         # Focus placeholders
         elif placeholder == 'current_focus' and country_data:
             return self._get_current_focus(country_data, target_country)
+        
+        # Satirical persona placeholders
+        elif placeholder.startswith('peasant_'):
+            return self._get_peasant_name_part(placeholder, target_country)
+        elif placeholder == 'time_traveler_name':
+            return random.choice(['Marcus Future', 'Jenny TimeSkip', 'Bob Chronos', 'Lisa Paradox'])
+        elif placeholder == 'tourist_name':
+            return random.choice(['Chad Tourism', 'Karen Wanderlost', 'Steve MapQuest', 'Brenda Confusion'])
+        elif placeholder == 'philosopher_name':
+            return random.choice(['Drunk Socrates', 'Tipsy Plato', 'Wasted Aristotle', 'Hammered Diogenes'])
+        elif placeholder == 'operator_name':
+            return random.choice(['Old Telegraph Tom', 'Morse Mary', 'Buzzing Bob', 'Clicking Clara'])
+        elif placeholder == 'actor_name':
+            return random.choice(['Drama Dan', 'Theater Tina', 'Method Mike', 'Stage Sarah'])
+        elif placeholder == 'translator_name':
+            return random.choice(['Literal Larry', 'Exact Emma', 'Precise Pete', 'Accurate Annie'])
+        elif placeholder == 'random_number':
+            return str(random.randint(1, 999))
         
         # Fallback - provide reasonable defaults for missing placeholders
         if placeholder == 'country_name':
@@ -169,20 +210,26 @@ class PersonaTemplateProcessor:
         return None
     
     def _get_current_leader(self, country_data: Dict, country_tag: str) -> str:
-        """Get the current leader name or generate appropriate title"""
+        """Get the current leader name from game data or generate appropriate title"""
         politics = country_data.get('politics', {})
         ruling_party = politics.get('ruling_party', 'democratic')
         
-        # Check if we have leader data
+        # Check if we have actual leader data with names
         parties = politics.get('parties', {})
         if ruling_party in parties:
             party_data = parties[ruling_party]
             leaders = party_data.get('country_leader', [])
             if leaders:
-                # For now, use generic titles - in future could extract actual leader names
-                pass
+                # Get the first leader's name
+                leader = leaders[0]
+                character = leader.get('character', {})
+                character_name = character.get('name')
+                
+                if character_name:
+                    # Convert character name to display name
+                    return self._convert_character_name_to_display(character_name, country_tag)
         
-        # Generate appropriate leader title based on ideology and country
+        # Fallback: Generate appropriate leader title based on ideology and country
         ideology = ruling_party.lower()
         
         if ideology == 'fascism':
@@ -193,6 +240,31 @@ class PersonaTemplateProcessor:
             return f"{self._get_democratic_title(country_tag)}"
         else:
             return f"{self._get_neutral_title(country_tag)}"
+    
+    def _convert_character_name_to_display(self, character_name: str, country_tag: str) -> str:
+        """Convert character name from game data to display name"""
+        # Use localization system to get the display name
+        if self.localizer:
+            localized_name = self.localizer.get_localized_text(character_name)
+            if localized_name and localized_name != character_name:
+                return localized_name
+        
+        # Fallback: Clean up the character name for display
+        # Remove country prefix and underscores, title case
+        if '_' in character_name:
+            # Remove country prefix if it exists
+            parts = character_name.split('_', 1)
+            if len(parts) == 2 and parts[0].upper() == country_tag:
+                name_part = parts[1]
+            else:
+                name_part = character_name
+            
+            # Replace underscores with spaces and title case
+            display_name = name_part.replace('_', ' ').title()
+            return display_name
+        else:
+            # Simple name, just title case
+            return character_name.title()
     
     def _get_leader_title(self, country_data: Dict, country_tag: str) -> str:
         """Get appropriate leader title"""
@@ -251,6 +323,74 @@ class PersonaTemplateProcessor:
         
         return adjectives.get(country_tag, f"{country_tag}n")
     
+    def _get_ideological_country_name(self, country_data: Dict, target_country: str) -> str:
+        """Get ideological country name based on ruling party"""
+        if not country_data:
+            return self.localizer.get_country_name(target_country)
+        
+        politics = country_data.get('politics', {})
+        ruling_party = politics.get('ruling_party', 'democratic').lower()
+        base_country = self.localizer.get_country_name(target_country)
+        
+        # Map ideological names for major countries
+        ideological_names = {
+            'GER': {
+                'fascism': 'German Reich',
+                'democratic': 'German Republic',
+                'communism': 'German Socialist Republic',
+                'neutrality': 'Germany'
+            },
+            'SOV': {
+                'communism': 'Soviet Union',
+                'fascism': 'Russian State', 
+                'democratic': 'Russian Republic',
+                'neutrality': 'Russia'
+            },
+            'ITA': {
+                'fascism': 'Italian Empire',
+                'democratic': 'Italian Republic',
+                'communism': 'Italian Socialist Republic',
+                'neutrality': 'Italy'
+            },
+            'JAP': {
+                'fascism': 'Empire of Japan',
+                'democratic': 'Japanese Republic',
+                'communism': 'Japanese Socialist Republic',
+                'neutrality': 'Japan'
+            },
+            'ENG': {
+                'fascism': 'British Empire',
+                'democratic': 'United Kingdom',
+                'communism': 'British Socialist Republic',
+                'neutrality': 'Britain'
+            },
+            'FRA': {
+                'fascism': 'French State',
+                'democratic': 'French Republic',
+                'communism': 'French Socialist Republic',
+                'neutrality': 'France'
+            },
+            'USA': {
+                'fascism': 'American Reich',
+                'democratic': 'United States',
+                'communism': 'American Socialist Republic',
+                'neutrality': 'United States'
+            }
+        }
+        
+        if target_country in ideological_names:
+            return ideological_names[target_country].get(ruling_party, base_country)
+        
+        # Fallback for other countries
+        if ruling_party == 'fascism':
+            return f"{base_country} Reich"
+        elif ruling_party == 'communism':
+            return f"{base_country} Socialist Republic"
+        elif ruling_party == 'democratic':
+            return f"{base_country} Republic"
+        else:
+            return base_country
+    
     def _get_current_focus(self, country_data: Dict, country_tag: str) -> str:
         """Get current national focus"""
         focus_data = country_data.get('focus', {})
@@ -262,6 +402,35 @@ class PersonaTemplateProcessor:
             return clean_name
         
         return "domestic development"
+    
+    def _get_peasant_name_part(self, placeholder: str, country_tag: str) -> str:
+        """Get peasant name parts based on country"""
+        peasant_names = {
+            'GER': {'first': ['Hans', 'Fritz', 'Greta', 'Brunhilde'], 'last': ['Müller', 'Schmidt', 'Bauer', 'Kartoffel'], 'handle': ['FarmHans', 'PotatoFritz', 'ChickenGreta']},
+            'SOV': {'first': ['Ivan', 'Dimitri', 'Katya', 'Olga'], 'last': ['Petrov', 'Volkov', 'Smirnov', 'Tractor'], 'handle': ['ComradeIvan', 'SovietPlow', 'RedFarmer']},
+            'FRA': {'first': ['Pierre', 'Marcel', 'Marie', 'Brigitte'], 'last': ['Dubois', 'Martin', 'Fromage', 'Baguette'], 'handle': ['PierreFarm', 'WinePeasant', 'CheeseMarie']},
+            'ENG': {'first': ['William', 'George', 'Mary', 'Elizabeth'], 'last': ['Smith', 'Brown', 'Sheep', 'Pudding'], 'handle': ['TudorWill', 'TeaPeasant', 'RainMary']},
+            'ITA': {'first': ['Giuseppe', 'Mario', 'Anna', 'Lucia'], 'last': ['Rossi', 'Bianchi', 'Pasta', 'Vino'], 'handle': ['MarioFarm', 'PastaJoe', 'WineAnna']},
+            'USA': {'first': ['Jebediah', 'Cletus', 'Mary-Sue', 'Betty-Lou'], 'last': ['Johnson', 'Williams', 'Cornfield', 'Tractor'], 'handle': ['JebCorn', 'YeeHawCletus', 'FarmMary']},
+            'JAP': {'first': ['Hiroshi', 'Takeshi', 'Yuki', 'Sakura'], 'last': ['Tanaka', 'Sato', 'Ricefield', 'Miso'], 'handle': ['RiceHiro', 'FishTake', 'SakuraSake']}
+        }
+        
+        default_names = {
+            'first': ['Bob', 'Joe', 'Mary', 'Sue'],
+            'last': ['Farmer', 'Field', 'Crop', 'Dirt'],
+            'handle': ['SimpleBob', 'FarmJoe', 'FieldMary']
+        }
+        
+        names = peasant_names.get(country_tag, default_names)
+        
+        if placeholder == 'peasant_first_name':
+            return random.choice(names['first'])
+        elif placeholder == 'peasant_last_name':
+            return random.choice(names['last'])
+        elif placeholder == 'peasant_handle':
+            return random.choice(names['handle'])
+        else:
+            return 'SimpleFolk'
     
     def _get_fascist_title(self, country_tag: str) -> str:
         """Get appropriate fascist leader title for country"""
@@ -311,44 +480,69 @@ class PersonaTemplateProcessor:
         
         return conditional_dict.get('default', '')
     
-    def _process_ideology_conditional(self, conditional: Dict, context: Dict) -> str:
+    def _process_ideology_conditional(self, conditional: Dict, context: Dict) -> Any:
         """Process ideology-based conditionals"""
         country_data = context.get('country_data')
         if not country_data:
-            return conditional.get('default', '')
+            result = conditional.get('default', '')
+        else:
+            politics = country_data.get('politics', {})
+            ruling_party = politics.get('ruling_party', 'democratic').lower()
+            result = conditional.get(ruling_party, conditional.get('default', ''))
         
-        politics = country_data.get('politics', {})
-        ruling_party = politics.get('ruling_party', 'democratic').lower()
-        
-        return conditional.get(ruling_party, conditional.get('default', ''))
+        # Process template variables in the conditional result
+        return self._process_conditional_result(result, context)
     
-    def _process_country_conditional(self, conditional: Dict, context: Dict) -> str:
+    def _process_country_conditional(self, conditional: Dict, context: Dict) -> Any:
         """Process country-based conditionals"""
         target_country = context.get('target_country')
         if not target_country:
-            return conditional.get('default', '')
+            result = conditional.get('default', '')
+        else:
+            result = conditional.get(target_country, conditional.get('default', ''))
         
-        return conditional.get(target_country, conditional.get('default', ''))
+        # Process template variables in the conditional result
+        return self._process_conditional_result(result, context)
     
-    def _process_focus_conditional(self, conditional: Dict, context: Dict) -> str:
+    def _process_focus_conditional(self, conditional: Dict, context: Dict) -> Any:
         """Process focus-type conditionals"""
         country_data = context.get('country_data')
         if not country_data:
-            return conditional.get('default', '')
-        
-        focus_data = country_data.get('focus', {})
-        current_focus = focus_data.get('current', '').lower()
-        
-        # Categorize focus type
-        if any(keyword in current_focus for keyword in ['army', 'military', 'war', 'rearm']):
-            focus_type = 'military'
-        elif any(keyword in current_focus for keyword in ['industry', 'production', 'economy']):
-            focus_type = 'economic'
-        elif any(keyword in current_focus for keyword in ['political', 'ideology', 'party']):
-            focus_type = 'political'
-        elif any(keyword in current_focus for keyword in ['diplomatic', 'alliance', 'foreign']):
-            focus_type = 'diplomatic'
+            result = conditional.get('default', '')
         else:
-            focus_type = 'general'
+            focus_data = country_data.get('focus', {})
+            current_focus = focus_data.get('current', '').lower()
+            
+            # Categorize focus type
+            if any(keyword in current_focus for keyword in ['army', 'military', 'war', 'rearm']):
+                focus_type = 'military'
+            elif any(keyword in current_focus for keyword in ['industry', 'production', 'economy']):
+                focus_type = 'economic'
+            elif any(keyword in current_focus for keyword in ['political', 'ideology', 'party']):
+                focus_type = 'political'
+            elif any(keyword in current_focus for keyword in ['diplomatic', 'alliance', 'foreign']):
+                focus_type = 'diplomatic'
+            else:
+                focus_type = 'general'
+            
+            result = conditional.get(focus_type, conditional.get('default', ''))
         
-        return conditional.get(focus_type, conditional.get('default', ''))
+        # Process template variables in the conditional result
+        return self._process_conditional_result(result, context)
+    
+    def _process_conditional_result(self, result: Any, context: Dict) -> Any:
+        """Process template variables in conditional results"""
+        if isinstance(result, str):
+            return self._process_template_string(result, context)
+        elif isinstance(result, list):
+            return [
+                self._process_template_string(item, context) if isinstance(item, str) else item 
+                for item in result
+            ]
+        elif isinstance(result, dict):
+            if '_conditional' in result:
+                return self._process_conditional(result, context)
+            else:
+                return self._process_nested_dict(result, context)
+        else:
+            return result
