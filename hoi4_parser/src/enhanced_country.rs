@@ -36,6 +36,8 @@ pub struct EnhancedCountry {
     pub politics: Option<Politics>,
     #[serde(default)]
     pub focus: Option<Focus>,
+    #[serde(default)]
+    pub major: Option<bool>,
 }
 
 #[derive(Deserialize, Debug, Clone, Serialize)]

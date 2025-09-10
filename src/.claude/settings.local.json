@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//workspaces/codespaces-blank/HOI4-AI-Addon/**)",
+      "Bash(python:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

@@ -113,7 +113,7 @@ fn extract_completed_focuses(save_content: &str) -> BTreeMap<String, Vec<String>
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let save_path = "autosave.hoi4";
-    let output_path = "game_data.json";
+    let output_path = "../data/game_data.json";
     
     println!("Parsing HOI4 save file: {}", save_path);
     
@@ -143,11 +143,22 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .filter(|event| *event != "id" && *event != "=")
         .collect();
     
-    // Filter for active countries (not default 50%/50% values)
+    // Filter for active countries (not default values and can actually do focuses)
     let active_countries: Vec<_> = save.countries.iter()
         .filter(|(_, country)| {
-            country.stability != 0.5 || 
-            country.war_support != 0.5
+            // Must have non-default stability/war_support values
+            let has_activity = country.stability != 0.5 || country.war_support != 0.5;
+            
+            // Must have either a current focus or be able to do focuses (not just have focus=null)
+            let can_do_focuses = match &country.focus {
+                Some(focus) => {
+                    // If current is Some (has a focus) or current is None but progress exists (just finished)
+                    focus.current.is_some() || focus.progress.is_some()
+                },
+                None => false, // No focus system at all means inactive country
+            };
+            
+            has_activity && can_do_focuses
         })
         .collect();
     

@@ -12,4 +12,4 @@ __pycache__/
 */news_reports/*
 */reports/*
 locale/*
-.claude/settings.local.json
+/streamer-tools/twitter-feed/ai_logs
