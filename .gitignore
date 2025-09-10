@@ -14,3 +14,4 @@ __pycache__/
 locale/*
 /streamer-tools/twitter-feed/ai_logs
 .claude/settings.local.json
+/ai_logs
