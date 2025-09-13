@@ -1,6 +1,6 @@
 {
   "stream_settings": {
-    "auto_generation_interval": 60,
+    "auto_generation_interval": 100,
     "max_tweets_stored": 50,
     "server_port": 5000,
     "debug_mode": false
